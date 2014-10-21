@@ -175,6 +175,7 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
             if (client != null) {
                 pool.returnResource(client);
             }
+            messageIndex = 0;
         }
     }
 
