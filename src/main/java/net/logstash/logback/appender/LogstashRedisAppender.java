@@ -27,6 +27,7 @@ import redis.clients.jedis.Protocol;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by aqlu on 2014-10-13.
@@ -36,19 +37,24 @@ import java.util.concurrent.*;
  * 
  * <pre>
  * &lt;appender name="redisAppender" class="net.logstash.logback.appender.LogstashRedisAppender"&gt;
- *     &lt;host&gt;172.19.65.153&lt;/host&gt;          &lt;!-- redis host, required --&gt;
- *     &lt;port&gt;6379&lt;/port&gt;                   &lt;!-- redis port, default is 6379 --&gt;
- *     &lt;key&gt;logstash_intf_log&lt;/key&gt;        &lt;!-- redis key, required --&gt;
- *     &lt;enableBatch&gt;true&lt;/enableBatch&gt;     &lt;!-- true is batch write to redis; default is true --&gt;
- *     &lt;batchSize&gt;100&lt;/batchSize&gt;          &lt;!-- batch size, default 100 --&gt;
- *     &lt;period&gt;500&lt;/period&gt;                &lt;!-- each write period redis, default 500 ms --&gt;
+ *     &lt;host&gt;172.19.65.153&lt;/host&gt;                  &lt;!-- redis host, required --&gt;
+ *     &lt;port&gt;6379&lt;/port&gt;                           &lt;!-- redis port, default is 6379 --&gt;
+ *     &lt;database&gt;0&lt;/database&gt;                      &lt;!-- redis database, default is 0 --&gt;
+ *     &lt;password&gt;&lt;/password&gt;                       &lt;!-- redis password, optional --&gt;
+ *     &lt;timeout&gt;2000&lt;/timeout&gt;                     &lt;!-- redis timeout, default is 2000ms --&gt;
+ *     &lt;key&gt;logstash_intf_log&lt;/key&gt;                &lt;!-- redis key, required --&gt;
+ *     &lt;enableBatch&gt;true&lt;/enableBatch&gt;             &lt;!-- true is batch write to redis; default is true --&gt;
+ *     &lt;batchSize&gt;100&lt;/batchSize&gt;                  &lt;!-- batch size, default 100 --&gt;
+ *     &lt;period&gt;500&lt;/period&gt;                        &lt;!-- each write period redis, default 500 ms --&gt;
+ *     &lt;maximumFrequency&gt;10000&lt;/maximumFrequency&gt;  &lt;!-- maximum count of events per second, default is 10000 --&gt;
+ *     &lt;ignoreOverload&gt;false&lt;/ignoreOverload&gt;      &lt;!-- if true ignore overload and continue write to redis; default is false--&gt;
  *     &lt;layout class="net.logstash.logback.layout.LogstashLayout"&gt;
  *         &lt;includeContext&gt;false&lt;/includeContext&gt;
  *         &lt;includeMdc&gt;false&lt;/includeMdc&gt;
  *         &lt;includeCallerInfo&gt;false&lt;/includeCallerInfo&gt;
  *         &lt;customFields&gt;{"source": "your source", "type": "your type"}&lt;/customFields&gt;
  *     &lt;/layout&gt;
- *     &lt;appender-ref ref="fileAppender" /&gt;       &lt;!-- output to this appender when output to redis failed; if you are not configured, then ignore this log, optional; --&gt;
+ *     &lt;appender-ref ref="fileAppender" /&gt;               &lt;!-- output to this appender when output to redis failed or output overload; if you are not configured, then ignore this log, optional; --&gt;
  * &lt;/appender&gt;
  * 
  * &lt;appender name="fileAppender" class="ch.qos.logback.core.rolling.RollingFileAppender"&lt;
@@ -70,6 +76,12 @@ import java.util.concurrent.*;
  */
 public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEvent> implements
         AppenderAttachable<ILoggingEvent>, Runnable {
+    /**
+     * default maximum events per second
+     */
+    private static final int DEFAULT_MAX_FREQUENCY = 10000;
+
+    private AtomicInteger eventsPerSecond = new AtomicInteger(0);
 
     private AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<ILoggingEvent>();
 
@@ -78,6 +90,8 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
     private Layout<ILoggingEvent> layout = new LogstashLayout();
 
     private ScheduledExecutorService executor;
+
+    private ScheduledExecutorService cleanExecutor;
 
     private int messageIndex = 0;
 
@@ -106,6 +120,10 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
     private boolean enableBatch = true;
 
     private boolean daemonThread = true;
+
+    private boolean ignoreOverload = false;
+
+    private int maximumFrequency = DEFAULT_MAX_FREQUENCY;
 
     public void run() {
         String[] batchLogs = new String[batchSize];
@@ -140,10 +158,18 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
     @Override
     protected void append(ILoggingEvent event) {
         try {
-            if (enableBatch) {
-                events.add(event);
-            } else {
-                push(layout.doLayout(event));
+            if(ignoreOverload || eventsPerSecond.incrementAndGet() < maximumFrequency) {
+                if (enableBatch) {
+                    events.add(event);
+                } else {
+                    push(layout.doLayout(event));
+                }
+            }else {
+                if (appenderCount > 0) {
+                    this.appendLoopOnAppenders(event);
+                }else{
+                    addWarn("append event overload, Current frequency is " + eventsPerSecond.get() + " per second");
+                }
             }
         } catch (Exception e) {
             addInfo("record log to redis failed.", e);
@@ -151,7 +177,6 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
             if (appenderCount > 0) {
                 this.appendLoopOnAppenders(event);
             }
-
         }
     }
 
@@ -161,6 +186,7 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
      */
     private void push(String... jsonLogs) throws Exception {
         Jedis client = null;
+
         try {
             client = pool.getResource();
             client.rpush(key, jsonLogs);
@@ -192,12 +218,21 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
 
         executor = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("RedisAppender", daemonThread));
         executor.scheduleWithFixedDelay(this, period, period, TimeUnit.MILLISECONDS);
+        cleanExecutor = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("frequency-clean-thread", daemonThread));
+        cleanExecutor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                eventsPerSecond.set(0);
+            }
+        }, 1, 1, TimeUnit.SECONDS);
+
     }
 
     @Override
     public void stop() {
         super.stop();
         executor.shutdown();
+        cleanExecutor.shutdown();
         pool.destroy();
     }
 
@@ -332,5 +367,21 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
     @Override
     public boolean detachAppender(String name) {
         return aai.detachAppender(name);
+    }
+
+    public boolean isIgnoreOverload() {
+        return ignoreOverload;
+    }
+
+    public void setIgnoreOverload(boolean ignoreOverload) {
+        this.ignoreOverload = ignoreOverload;
+    }
+
+    public int getMaximumFrequency() {
+        return maximumFrequency;
+    }
+
+    public void setMaximumFrequency(int maximumFrequency) {
+        this.maximumFrequency = maximumFrequency;
     }
 }
