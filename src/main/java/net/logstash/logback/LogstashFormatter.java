@@ -14,44 +14,31 @@
 package net.logstash.logback;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.ref.SoftReference;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import ch.qos.logback.classic.pattern.TargetLengthBasedClassNameAbbreviator;
 import net.logstash.logback.fieldnames.LogstashFieldNames;
 import net.logstash.logback.marker.LogstashMarker;
 import net.logstash.logback.marker.Markers;
 
-import org.apache.commons.lang.time.FastDateFormat;
 import org.slf4j.MDC;
 import org.slf4j.Marker;
 
+import ch.qos.logback.classic.pattern.TargetLengthBasedClassNameAbbreviator;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.ThrowableProxyUtil;
 import ch.qos.logback.core.Context;
 import ch.qos.logback.core.spi.ContextAware;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.io.SegmentedStringWriter;
-import com.fasterxml.jackson.core.util.BufferRecycler;
-import com.fasterxml.jackson.core.util.ByteArrayBuilder;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.MappingJsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 
  */
-public class LogstashFormatter {
+public class LogstashFormatter extends LogstashAbstractFormatter<ILoggingEvent, LogstashFieldNames> {
     
     /**
      * Name of the {@link Marker} that indicates that the log event arguments should be appended to the
@@ -62,10 +49,7 @@ public class LogstashFormatter {
      */
     @Deprecated
     private static final String JSON_MARKER_NAME = "JSON";
-    
-    private static final JsonFactory FACTORY = new MappingJsonFactory().enable(JsonGenerator.Feature.ESCAPE_NON_ASCII);
-    private static final ObjectMapper MAPPER = new ObjectMapper(FACTORY);
-    private static final FastDateFormat ISO_DATETIME_TIME_ZONE_FORMAT_WITH_MILLIS = FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ");
+
     private static final StackTraceElement DEFAULT_CALLER_DATA = new StackTraceElement("", "", "", 0);
     
     /**
@@ -83,14 +67,15 @@ public class LogstashFormatter {
     private boolean enableContextMap;
     
     /**
+     * The un-parsed custom fields string to use to initialize customFields
+     * when the formatter is started.
+     */
+    private String customFieldString;
+
+    /**
      * When non-null, the fields in this JsonNode will be embedded in the logstash json.
      */
     private JsonNode customFields;
-
-    /**
-     * The field names to use when writing the standard event fields
-     */
-    private LogstashFieldNames fieldNames = new LogstashFieldNames();
 
     /**
      * When set to anything >= 0 we will try to abbreviate the logger name
@@ -112,55 +97,40 @@ public class LogstashFormatter {
      */
     private boolean includeMdc = true;
 
-    /**
-     * This <code>ThreadLocal</code> contains a {@link java.lang.ref.SoftReference} to a {@link BufferRecycler} used to provide a low-cost
-     * buffer recycling between writer instances.
-     */
-    private final ThreadLocal<SoftReference<BufferRecycler>> recycler = new ThreadLocal<SoftReference<BufferRecycler>>() {
-        protected SoftReference<BufferRecycler> initialValue() {
-            BufferRecycler bufferRecycler = new BufferRecycler();
-            return new SoftReference<BufferRecycler>(bufferRecycler);
-        };
-    };
-    
-    public LogstashFormatter() {
-        this(false);
+    public LogstashFormatter(ContextAware contextAware) {
+        this(contextAware, false);
     }
     
-    public LogstashFormatter(boolean includeCallerInfo) {
+    public LogstashFormatter(ContextAware contextAware, boolean includeCallerInfo) {
+        this(contextAware, includeCallerInfo, null);
         this.includeCallerInfo = includeCallerInfo;
     }
     
-    public LogstashFormatter(boolean includeCallerInfo, JsonNode customFields) {
+    public LogstashFormatter(ContextAware contextAware, boolean includeCallerInfo, JsonNode customFields) {
+        super(contextAware, new LogstashFieldNames());
+
         this.includeCallerInfo = includeCallerInfo;
         this.customFields = customFields;
     }
     
-    public byte[] writeValueAsBytes(ILoggingEvent event, Context context) throws IOException {
-        ByteArrayBuilder outputStream = new ByteArrayBuilder(getBufferRecycler());
-        
-        try {
-            writeValueToOutputStream(event, context, outputStream);
-            return outputStream.toByteArray();
-        } finally {
-            outputStream.release();
+    @Override
+    public void start() {
+        super.start();
+        initializeCustomFields();
+    }
+
+    private void initializeCustomFields() {
+        if (this.customFieldString != null) {
+            try {
+                this.customFields = getJsonFactory().createParser(customFieldString).readValueAsTree();
+            } catch (IOException e) {
+                contextAware.addError("Failed to parse custom fields [" + customFieldString + "]", e);
+            }
         }
     }
-    
-    public void writeValueToOutputStream(ILoggingEvent event, Context context, OutputStream outputStream) throws IOException {
-        JsonGenerator generator = FACTORY.createGenerator(outputStream);
-        writeValueToGenerator(generator, event, context);
-    }
-    
-    public String writeValueAsString(ILoggingEvent event, Context context) throws IOException {
-        SegmentedStringWriter writer = new SegmentedStringWriter(getBufferRecycler());
-        
-        JsonGenerator generator = FACTORY.createGenerator(writer);
-        writeValueToGenerator(generator, event, context);
-        return writer.getAndClear();
-    }
-    
-    private void writeValueToGenerator(JsonGenerator generator, ILoggingEvent event, Context context) throws IOException {
+
+    @Override
+    protected void writeValueToGenerator(JsonGenerator generator, ILoggingEvent event, Context context) throws IOException {
         
         generator.writeStartObject();
         writeLogstashFields(generator, event);
@@ -179,21 +149,21 @@ public class LogstashFormatter {
     }
     
     private void writeLogstashFields(JsonGenerator generator, ILoggingEvent event) throws IOException {
-        generator.writeStringField(fieldNames.getTimestamp(), ISO_DATETIME_TIME_ZONE_FORMAT_WITH_MILLIS.format(event.getTimeStamp()));
-        generator.writeNumberField(fieldNames.getVersion(), 1);
-        generator.writeStringField(fieldNames.getMessage(), event.getFormattedMessage());
+        writeStringField(generator, fieldNames.getTimestamp(), ISO_DATETIME_TIME_ZONE_FORMAT_WITH_MILLIS.format(event.getTimeStamp()));
+        writeNumberField(generator, fieldNames.getVersion(), 1);
+        writeStringField(generator, fieldNames.getMessage(), event.getFormattedMessage());
     }
     
     private void writeLoggerFields(JsonGenerator generator, ILoggingEvent event) throws IOException {
         // according to documentation (http://logback.qos.ch/manual/layouts.html#conversionWord) length can be >=0
         if (shortenedLoggerNameLength >= 0) {
-            generator.writeStringField(fieldNames.getLogger(), abbreviator.abbreviate(event.getLoggerName()));
+            writeStringField(generator, fieldNames.getLogger(), abbreviator.abbreviate(event.getLoggerName()));
         } else {
-            generator.writeStringField(fieldNames.getLogger(), event.getLoggerName());
+            writeStringField(generator, fieldNames.getLogger(), event.getLoggerName());
         }
-        generator.writeStringField(fieldNames.getThread(), event.getThreadName());
-        generator.writeStringField(fieldNames.getLevel(), event.getLevel().toString());
-        generator.writeNumberField(fieldNames.getLevelValue(), event.getLevel().toInt());
+        writeStringField(generator, fieldNames.getThread(), event.getThreadName());
+        writeStringField(generator, fieldNames.getLevel(), event.getLevel().toString());
+        writeNumberField(generator, fieldNames.getLevelValue(), event.getLevel().toInt());
     }
     
     private void writeCallerDataFieldsIfNecessary(JsonGenerator generator, ILoggingEvent event) throws IOException {
@@ -202,10 +172,10 @@ public class LogstashFormatter {
             if (fieldNames.getCaller() != null) {
                 generator.writeObjectFieldStart(fieldNames.getCaller());
             }
-            generator.writeStringField(fieldNames.getCallerClass(), callerData.getClassName());
-            generator.writeStringField(fieldNames.getCallerMethod(), callerData.getMethodName());
-            generator.writeStringField(fieldNames.getCallerFile(), callerData.getFileName());
-            generator.writeNumberField(fieldNames.getCallerLine(), callerData.getLineNumber());
+            writeStringField(generator, fieldNames.getCallerClass(), callerData.getClassName());
+            writeStringField(generator, fieldNames.getCallerMethod(), callerData.getMethodName());
+            writeStringField(generator, fieldNames.getCallerFile(), callerData.getFileName());
+            writeNumberField(generator, fieldNames.getCallerLine(), callerData.getLineNumber());
             if (fieldNames.getCaller() != null) {
                 generator.writeEndObject();
             }
@@ -215,7 +185,7 @@ public class LogstashFormatter {
     private void writeStackTraceFieldIfNecessary(JsonGenerator generator, ILoggingEvent event) throws IOException {
         IThrowableProxy throwableProxy = event.getThrowableProxy();
         if (throwableProxy != null) {
-            generator.writeStringField(fieldNames.getStackTrace(), ThrowableProxyUtil.asString(throwableProxy));
+            writeStringField(generator, fieldNames.getStackTrace(), ThrowableProxyUtil.asString(throwableProxy));
         }
     }
     
@@ -244,7 +214,7 @@ public class LogstashFormatter {
         final Marker marker = event.getMarker();
         if (marker != null && marker.contains(JSON_MARKER_NAME)) {
             generator.writeFieldName("json_message");
-            MAPPER.writeValue(generator, event.getArgumentArray());
+            generator.writeObject(event.getArgumentArray());
         }
     }
     
@@ -279,16 +249,7 @@ public class LogstashFormatter {
             }
         }
     }
-    
-    private void writeMapEntries(JsonGenerator generator, Map<?, ?> map) throws IOException, JsonGenerationException, JsonMappingException {
-        if (map != null) {
-            for (Map.Entry<?, ?> entry : map.entrySet()) {
-                generator.writeFieldName(entry.getKey().toString());
-                MAPPER.writeValue(generator, entry.getValue());
-            }
-        }
-    }
-    
+
     private void writeGlobalCustomFields(JsonGenerator generator) throws IOException {
         writeFieldsOfNode(generator, customFields);
     }
@@ -336,7 +297,7 @@ public class LogstashFormatter {
     private void writeLogstashMarkerIfNecessary(JsonGenerator generator, Marker marker) throws IOException {
         if (marker != null) {
             if (isLogstashMarker(marker)) {
-                ((LogstashMarker) marker).writeTo(generator, MAPPER);
+                ((LogstashMarker) marker).writeTo(generator);
             }
             
             if (marker.hasReferences()) {
@@ -377,15 +338,10 @@ public class LogstashFormatter {
         this.includeCallerInfo = includeCallerInfo;
     }
     
-    public static JsonNode parseCustomFields(String customFields) throws JsonParseException, JsonProcessingException, IOException {
-        return FACTORY.createParser(customFields).readValueAsTree();
-    }
-    
-    public void setCustomFieldsFromString(String customFields, ContextAware contextAware) {
-        try {
-            setCustomFields(parseCustomFields(customFields));
-        } catch (IOException e) {
-            contextAware.addError("Failed to parse custom fields [" + customFields + "]", e);
+    public void setCustomFieldsFromString(String customFields) {
+        this.customFieldString = customFields;
+        if (isStarted()) {
+            initializeCustomFields();
         }
     }
     
@@ -395,14 +351,6 @@ public class LogstashFormatter {
     
     public JsonNode getCustomFields() {
         return this.customFields;
-    }
-    
-    public LogstashFieldNames getFieldNames() {
-        return fieldNames;
-    }
-    
-    public void setFieldNames(LogstashFieldNames fieldNames) {
-        this.fieldNames = fieldNames;
     }
     
     public int getShortenedLoggerNameLength() {
@@ -445,14 +393,4 @@ public class LogstashFormatter {
     public void setEnableContextMap(boolean enableContextMap) {
         this.enableContextMap = enableContextMap;
     }
-    
-    private BufferRecycler getBufferRecycler() {
-        SoftReference<BufferRecycler> bufferRecyclerReference = recycler.get();
-        BufferRecycler bufferRecycler = bufferRecyclerReference.get();
-        if (bufferRecycler == null) {
-            recycler.remove();
-            return getBufferRecycler();
-        }
-        return bufferRecycler;
-    };
 }

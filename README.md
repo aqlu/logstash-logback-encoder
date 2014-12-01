@@ -11,7 +11,7 @@ Maven style:
 <dependency>
   <groupId>net.logstash.logback</groupId>
   <artifactId>logstash-logback-encoder</artifactId>
-  <version>3.0</version>
+  <version>3.4</version>
 </dependency>
 ```
 ## Usage
@@ -214,7 +214,9 @@ If you want to customize individual field names, you can do so like this:
 See [`LogstashFieldNames`](/src/main/java/net/logstash/logback/fieldnames/LogstashFieldNames.java)
 for all the field names that can be customized.
 
-Also, you can log the caller info, MDC properties, and context properties
+Prevent a field from being output by setting the field name to `[ignore]`.
+
+Log the caller info, MDC properties, and context properties
 in sub-objects within the JSON event by specifying field
 names for `caller`, `mdc`, and `context`, respectively.
  
@@ -309,6 +311,33 @@ logger.info(appendFields(myobject), "log message");
 
 See [DEPRECATED.md](DEPRECATED.md) for other deprecated ways of adding json to the output.
 
+## Customizing JSON Factory and Generator
+
+The `JsonFactory` and `JsonGenerator` used to serialize output can be customized by creating
+custom instances of [`JsonFactoryDecorator`](/src/main/java/net/logstash/logback/decorate/JsonFactoryDecorator.java)
+or [`JsonGeneratorDecorator`](/src/main/java/net/logstash/logback/decorate/JsonGeneratorDecorator.java), respectively.
+
+For example, you could enable pretty printing like this:
+```java
+public class PrettyPrintingDecorator implements JsonGeneratorDecorator {
+
+    @Override
+    public JsonGenerator decorate(JsonGenerator generator) {
+        return generator.useDefaultPrettyPrinter();
+    }
+
+}
+```
+
+and then specify your decorator in the logback.xml file like this:
+
+```xml
+<encoder class="net.logstash.logback.encoder.LogstashEncoder">
+  <jsonGeneratorDecorator class="your.package.PrettyPrintingDecorator"/>
+</encoder>
+
+```
+
 ## Logback access logs
 For logback access logs, use it in your `logback-access.xml` like this:
 
@@ -320,6 +349,10 @@ For logback access logs, use it in your `logback-access.xml` like this:
 
 <appender-ref ref="stash" />
 ```
+
+The default field names used for access logs are different than those documented above.
+See [`LogstashAccessFieldNames`](/src/main/java/net/logstash/logback/fieldnames/LogstashAccessFieldNames.java)
+for all the field names used for access logs.
 
 ## Build status
 [![Build Status](https://travis-ci.org/logstash/logstash-logback-encoder.svg?branch=master)](https://travis-ci.org/logstash/logstash-logback-encoder)

@@ -179,6 +179,10 @@ public class LogstashTcpSocketAppender extends AppenderBase<ILoggingEvent>
         if (isStarted())
             return;
         int errorCount = 0;
+        if (encoder == null) {
+            errorCount++;
+            addError("No encoder was configured for appender " + name + ".");
+        }
         if (port <= 0) {
             errorCount++;
             addError("No port was configured for appender "
@@ -203,6 +207,7 @@ public class LogstashTcpSocketAppender extends AppenderBase<ILoggingEvent>
         }
         
         if (errorCount == 0) {
+            encoder.start();
             queue = new LinkedBlockingQueue<ILoggingEvent>(queueSize);
             peerId = "remote peer " + remoteHost + ":" + port + ": ";
             task = getContext().getExecutorService().submit(this);
