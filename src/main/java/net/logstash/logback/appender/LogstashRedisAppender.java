@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <pre>
  * &lt;appender name="redisAppender" class="net.logstash.logback.appender.LogstashRedisAppender"&gt;
  *     &lt;queueSize&gt;1024&lt;/queueSize&gt;                      &lt;!-- default buffer size, default is 1024 --&gt;
- *     &lt;discardingThreshold&gt;256&lt;/discardingThreshold&gt;   &lt;!-- if queue remaining capacity less then this value, debug and info will be discard. default is queueSize/5 --&gt;
+ *     &lt;discardingThreshold&gt;204&lt;/discardingThreshold&gt;   &lt;!-- if queue remaining capacity less then this value, debug and info will be discard. default is queueSize/5 --&gt;
  *     &lt;host&gt;172.19.65.153&lt;/host&gt;                       &lt;!-- redis host, required --&gt;
  *     &lt;port&gt;6379&lt;/port&gt;                                &lt;!-- redis port, default is 6379 --&gt;
  *     &lt;database&gt;0&lt;/database&gt;                           &lt;!-- redis database, default is 0 --&gt;
@@ -224,7 +224,7 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
                 client = null;
             }
 
-            addInfo("record log to redis failed.", e);
+            addInfo("record log to redis failed." + e.getMessage());
             if (appenderCount > 0) {
                 this.appendLoopOnAppenders(eventList.toArray(new ILoggingEvent[eventList.size()]));
             }
