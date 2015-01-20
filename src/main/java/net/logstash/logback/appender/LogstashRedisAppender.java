@@ -255,7 +255,7 @@ public class LogstashRedisAppender extends UnsynchronizedAppenderBase<ILoggingEv
 
         JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
         jedisPoolConfig.setJmxEnabled(true);
-        jedisPoolConfig.setJmxNamePrefix("logstash-redis-pool");
+        jedisPoolConfig.setJmxNamePrefix(this.getName() + "-redis-pool");
         jedisPoolConfig.setMaxIdle(maxIdle);
         jedisPoolConfig.setMaxTotal(maxTotal);
         jedisPoolConfig.setMaxWaitMillis(maxWaitMills);

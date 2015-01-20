@@ -4,7 +4,7 @@
 
     <groupId>net.logstash.logback</groupId>
     <artifactId>logstash-logback-encoder</artifactId>
-    <version>3.3-qianmi-5</version>
+    <version>3.4-qianmi-2</version>
 
     <name>Logstash Logback Encoder</name>
     <description>Logback encoder which will output events as Logstash-compatible JSON</description>
@@ -62,6 +62,12 @@
     </developers>
 
     <dependencies>
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>1.4.2</version>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
@@ -309,6 +315,10 @@
                                 <pattern>org.apache.commons.pool2</pattern>
                                 <shadedPattern>${project.groupId}.org.apache.commons.pool2</shadedPattern>
                             </relocation>
+                            <!--<relocation>-->
+                                <!--<pattern>ch.qos.logback</pattern>-->
+                                <!--<shadedPattern>${project.groupId}.ch.qos.logback</shadedPattern>-->
+                            <!--</relocation>-->
                         </relocations>
                     </configuration>
                 </plugin>
