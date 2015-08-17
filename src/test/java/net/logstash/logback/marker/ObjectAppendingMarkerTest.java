@@ -13,9 +13,7 @@
  */
 package net.logstash.logback.marker;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -54,35 +52,35 @@ public class ObjectAppendingMarkerTest {
         StringWriter writer = new StringWriter();
         JsonGenerator generator = FACTORY.createGenerator(writer);
         
-        ObjectAppendingMarker marker = Markers.append("myObject", myObject);
+        LogstashMarker marker = Markers.append("myObject", myObject);
         generator.writeStartObject();
         marker.writeTo(generator);
         generator.writeEndObject();
         generator.flush();
         
-        assertThat(writer.toString(), is("{\"myObject\":{\"myField\":\"value\"}}"));
+        assertThat(writer.toString()).isEqualTo("{\"myObject\":{\"myField\":\"value\"}}");
     }
     
     @Test
     public void testEquals() {
         MyClass myObject = new MyClass("value");
         
-        assertThat(Markers.append("myObject", myObject), is(Markers.append("myObject", myObject)));
+        assertThat(Markers.append("myObject", myObject)).isEqualTo(Markers.append("myObject", myObject));
         
-        assertThat(Markers.append("myObject", myObject), not(is(Markers.append("myObject", new MyClass("value1")))));
+        assertThat(Markers.append("myObject", myObject)).isNotEqualTo(Markers.append("myObject", new MyClass("value1")));
         
-        assertThat(Markers.append("myObject", myObject), not(is(Markers.append("myDifferentObject", myObject))));
+        assertThat(Markers.append("myObject", myObject)).isNotEqualTo(Markers.append("myDifferentObject", myObject));
     }
     
     @Test
     public void testHashCode() {
         MyClass myObject = new MyClass("value");
         
-        assertThat(Markers.append("myObject", myObject).hashCode(), is(Markers.append("myObject", myObject).hashCode()));
+        assertThat(Markers.append("myObject", myObject).hashCode()).isEqualTo(Markers.append("myObject", myObject).hashCode());
         
-        assertThat(Markers.append("myObject", myObject).hashCode(), not(is(Markers.append("myObject", new MyClass("value1")).hashCode())));
+        assertThat(Markers.append("myObject", myObject).hashCode()).isNotEqualTo(Markers.append("myObject", new MyClass("value1")).hashCode());
         
-        assertThat(Markers.append("myObject", myObject).hashCode(), not(is(Markers.append("myDifferentObject", myObject)).hashCode()));
+        assertThat(Markers.append("myObject", myObject).hashCode()).isNotEqualTo(Markers.append("myDifferentObject", myObject)).hashCode();
     }
     
 }

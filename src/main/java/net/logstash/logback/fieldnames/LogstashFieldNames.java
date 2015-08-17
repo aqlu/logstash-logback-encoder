@@ -13,22 +13,30 @@
  */
 package net.logstash.logback.fieldnames;
 
+import net.logstash.logback.composite.loggingevent.CallerDataJsonProvider;
+import net.logstash.logback.composite.loggingevent.LogLevelJsonProvider;
+import net.logstash.logback.composite.loggingevent.LogLevelValueJsonProvider;
+import net.logstash.logback.composite.loggingevent.LoggerNameJsonProvider;
+import net.logstash.logback.composite.loggingevent.StackTraceJsonProvider;
+import net.logstash.logback.composite.loggingevent.TagsJsonProvider;
+import net.logstash.logback.composite.loggingevent.ThreadNameJsonProvider;
+
 /**
  * Names of standard fields that appear in the JSON output.
  */
 public class LogstashFieldNames extends LogstashCommonFieldNames {
-
-    private String logger = "logger_name";
-    private String thread = "thread_name";
-    private String level = "level";
-    private String levelValue = "level_value";
+    
+    private String logger = LoggerNameJsonProvider.FIELD_LOGGER_NAME;
+    private String thread = ThreadNameJsonProvider.FIELD_THREAD_NAME;
+    private String level = LogLevelJsonProvider.FIELD_LEVEL;
+    private String levelValue = LogLevelValueJsonProvider.FIELD_LEVEL_VALUE;
     private String caller;
-    private String callerClass = "caller_class_name";
-    private String callerMethod = "caller_method_name";
-    private String callerFile = "caller_file_name";
-    private String callerLine = "caller_line_number";
-    private String stackTrace = "stack_trace";
-    private String tags = "tags";
+    private String callerClass = CallerDataJsonProvider.FIELD_CALLER_CLASS_NAME;
+    private String callerMethod = CallerDataJsonProvider.FIELD_CALLER_METHOD_NAME;
+    private String callerFile = CallerDataJsonProvider.FIELD_CALLER_FILE_NAME;
+    private String callerLine = CallerDataJsonProvider.FIELD_CALLER_LINE_NUMBER;
+    private String stackTrace = StackTraceJsonProvider.FIELD_STACK_TRACE;
+    private String tags = TagsJsonProvider.FIELD_TAGS;
     private String mdc;
     private String context;
     
@@ -156,4 +164,5 @@ public class LogstashFieldNames extends LogstashCommonFieldNames {
     public void setContext(String context) {
         this.context = context;
     }
+
 }

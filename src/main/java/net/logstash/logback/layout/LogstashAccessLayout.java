@@ -13,34 +13,43 @@
  */
 package net.logstash.logback.layout;
 
-import java.io.IOException;
-
 import net.logstash.logback.LogstashAccessFormatter;
+import net.logstash.logback.composite.CompositeJsonFormatter;
+import net.logstash.logback.composite.JsonProvider;
+import net.logstash.logback.fieldnames.LogstashAccessFieldNames;
 import ch.qos.logback.access.spi.IAccessEvent;
-import ch.qos.logback.core.LayoutBase;
 
-public class LogstashAccessLayout extends LayoutBase<IAccessEvent> {
+public class LogstashAccessLayout extends AccessEventCompositeJsonLayout {
     
-    private final LogstashAccessFormatter formatter = new LogstashAccessFormatter(this);
-    
-    public String doLayout(IAccessEvent event) {
-        try {
-            return formatter.writeValueAsString(event, getContext());
-        } catch (IOException e) {
-            addWarn("Error formatting logging event", e);
-            return null;
-        }
+    @Override
+    protected CompositeJsonFormatter<IAccessEvent> createFormatter() {
+        return new LogstashAccessFormatter(this);
     }
     
     @Override
-    public void start() {
-        super.start();
-        formatter.start();
+    protected LogstashAccessFormatter getFormatter() {
+        return (LogstashAccessFormatter) super.getFormatter();
     }
     
-    @Override
-    public void stop() {
-        super.stop();
-        formatter.stop();
+    public void addProvider(JsonProvider<IAccessEvent> provider) {
+        getFormatter().addProvider(provider);
     }
+    
+    public LogstashAccessFieldNames getFieldNames() {
+        return getFormatter().getFieldNames();
+    }
+    
+    public void setFieldNames(LogstashAccessFieldNames fieldNames) {
+        getFormatter().setFieldNames(fieldNames);
+    }
+
+    public String getTimeZone() {
+        return getFormatter().getTimeZone();
+    }
+
+    public void setTimeZone(String timeZoneId) {
+        getFormatter().setTimeZone(timeZoneId);
+    }
+
+
 }

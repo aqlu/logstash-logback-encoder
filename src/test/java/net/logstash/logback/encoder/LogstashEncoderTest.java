@@ -17,10 +17,7 @@ import static net.logstash.logback.marker.Markers.append;
 import static net.logstash.logback.marker.Markers.appendEntries;
 import static org.apache.commons.io.IOUtils.LINE_SEPARATOR;
 import static org.apache.commons.io.IOUtils.closeQuietly;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,15 +30,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
-import net.logstash.logback.LogstashFormatter;
 import net.logstash.logback.decorate.JsonFactoryDecorator;
 import net.logstash.logback.decorate.JsonGeneratorDecorator;
+import net.logstash.logback.fieldnames.LogstashCommonFieldNames;
 import net.logstash.logback.fieldnames.ShortenedFieldNames;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.time.FastDateFormat;
-import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -80,7 +77,6 @@ public class LogstashEncoderTest {
         outputStream = new ByteArrayOutputStream();
         encoder = new LogstashEncoder();
         encoder.init(outputStream);
-        encoder.start();
     }
     
     @Test
@@ -90,19 +86,19 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
         when(event.getTimeStamp()).thenReturn(timestamp);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("@timestamp").textValue(), is(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ").format
-                (timestamp)));
-        assertThat(node.get("@version").intValue(), is(1));
-        assertThat(node.get("logger_name").textValue(), is("LoggerName"));
-        assertThat(node.get("thread_name").textValue(), is("ThreadName"));
-        assertThat(node.get("message").textValue(), is("My message"));
-        assertThat(node.get("level").textValue(), is("ERROR"));
-        assertThat(node.get("level_value").intValue(), is(40000));
+        assertThat(node.get("@timestamp").textValue()).isEqualTo(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ").format(timestamp));
+        assertThat(node.get("@version").intValue()).isEqualTo(1);
+        assertThat(node.get("logger_name").textValue()).isEqualTo("LoggerName");
+        assertThat(node.get("thread_name").textValue()).isEqualTo("ThreadName");
+        assertThat(node.get("message").textValue()).isEqualTo("My message");
+        assertThat(node.get("level").textValue()).isEqualTo("ERROR");
+        assertThat(node.get("level_value").intValue()).isEqualTo(40000);
     }
     
     @Test
@@ -113,19 +109,20 @@ public class LogstashEncoderTest {
         
         when(event.getTimeStamp()).thenReturn(timestamp);
         encoder.setFieldNames(new ShortenedFieldNames());
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("@timestamp").textValue(), is(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ").format
-                (timestamp)));
-        assertThat(node.get("@version").intValue(), is(1));
-        assertThat(node.get("logger").textValue(), is("LoggerName"));
-        assertThat(node.get("thread").textValue(), is("ThreadName"));
-        assertThat(node.get("message").textValue(), is("My message"));
-        assertThat(node.get("level").textValue(), is("ERROR"));
-        assertThat(node.get("levelVal").intValue(), is(40000));
+        assertThat(node.get("@timestamp").textValue()).isEqualTo(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ").format
+                (timestamp));
+        assertThat(node.get("@version").intValue()).isEqualTo(1);
+        assertThat(node.get("logger").textValue()).isEqualTo("LoggerName");
+        assertThat(node.get("thread").textValue()).isEqualTo("ThreadName");
+        assertThat(node.get("message").textValue()).isEqualTo("My message");
+        assertThat(node.get("level").textValue()).isEqualTo("ERROR");
+        assertThat(node.get("levelVal").intValue()).isEqualTo(40000);
     }
     
     @Test
@@ -158,7 +155,7 @@ public class LogstashEncoderTest {
         
         String output = outputStream.toString("UTF-8");
         
-        assertThat(output, is(String.format(
+        assertThat(output).isEqualTo(String.format(
                 "{%n"
                 + "  @timestamp : \"" + FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ").format(timestamp) + "\",%n"
                 + "  @version : 1,%n"
@@ -167,7 +164,7 @@ public class LogstashEncoderTest {
                 + "  thread_name : \"ThreadName\",%n"
                 + "  level : \"ERROR\",%n"
                 + "  level_value : 40000%n"
-                + "}%n")));
+                + "}%n"));
     }
     
 
@@ -183,30 +180,32 @@ public class LogstashEncoderTest {
         when(event.getTimeStamp()).thenReturn(timestamp);
         encoder.setFieldNames(new ShortenedFieldNames());
         encoder.setShortenedLoggerNameLength(length);
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
 
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
 
-        assertThat(node.get("@timestamp").textValue(), is(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ").format
-                (timestamp)));
-        assertThat(node.get("@version").intValue(), is(1));
-        assertThat(node.get("logger").textValue(), is(shortenedLoggerName));
-        assertThat(node.get("thread").textValue(), is("ThreadName"));
-        assertThat(node.get("message").textValue(), is("My message"));
-        assertThat(node.get("level").textValue(), is("ERROR"));
-        assertThat(node.get("levelVal").intValue(), is(40000));
+        assertThat(node.get("@timestamp").textValue()).isEqualTo(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ").format
+                (timestamp));
+        assertThat(node.get("@version").intValue()).isEqualTo(1);
+        assertThat(node.get("logger").textValue()).isEqualTo(shortenedLoggerName);
+        assertThat(node.get("thread").textValue()).isEqualTo("ThreadName");
+        assertThat(node.get("message").textValue()).isEqualTo("My message");
+        assertThat(node.get("level").textValue()).isEqualTo("ERROR");
+        assertThat(node.get("levelVal").intValue()).isEqualTo(40000);
     }
     
     @Test
     public void closePutsSeparatorAtTheEnd() throws Exception {
         ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
         
+        encoder.start();
         encoder.doEncode(event);
         encoder.close();
         closeQuietly(outputStream);
         
-        assertThat(outputStream.toString(), Matchers.endsWith(LINE_SEPARATOR));
+        assertThat(outputStream.toString()).endsWith(LINE_SEPARATOR);
     }
     
     @Test
@@ -216,16 +215,17 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
         when(event.getThrowableProxy()).thenReturn(throwableProxy);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("stack_trace").textValue(), is(ThrowableProxyUtil.asString(throwableProxy)));
+        assertThat(node.get("stack_trace").textValue()).isEqualTo(ThrowableProxyUtil.asString(throwableProxy));
     }
     
     @Test
-    public void propertiesInMDCAreIncluded() throws Exception {
+    public void mdcAllIncluded() throws Exception {
         Map<String, String> mdcMap = new HashMap<String, String>();
         mdcMap.put("thing_one", "One");
         mdcMap.put("thing_two", "Three");
@@ -233,17 +233,60 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
         when(event.getMDCPropertyMap()).thenReturn(mdcMap);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("thing_one").textValue(), is("One"));
-        assertThat(node.get("thing_two").textValue(), is("Three"));
+        assertThat(node.get("thing_one").textValue()).isEqualTo("One");
+        assertThat(node.get("thing_two").textValue()).isEqualTo("Three");
     }
     
     @Test
-    public void propertiesInMDCAreNotIncludedIfSwitchedOff() throws Exception {
+    public void mdcSomeIncluded() throws Exception {
+        Map<String, String> mdcMap = new HashMap<String, String>();
+        mdcMap.put("thing_one", "One");
+        mdcMap.put("thing_two", "Three");
+        
+        ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
+        when(event.getMDCPropertyMap()).thenReturn(mdcMap);
+        
+        encoder.addIncludeMdcKeyName("thing_one");
+        
+        encoder.start();
+        encoder.doEncode(event);
+        closeQuietly(outputStream);
+        
+        JsonNode node = MAPPER.readTree(outputStream.toByteArray());
+        
+        assertThat(node.get("thing_one").textValue()).isEqualTo("One");
+        assertThat(node.get("thing_two")).isNull();
+    }
+    
+    @Test
+    public void mdcSomeExcluded() throws Exception {
+        Map<String, String> mdcMap = new HashMap<String, String>();
+        mdcMap.put("thing_one", "One");
+        mdcMap.put("thing_two", "Three");
+        
+        ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
+        when(event.getMDCPropertyMap()).thenReturn(mdcMap);
+        
+        encoder.addExcludeMdcKeyName("thing_two");
+        
+        encoder.start();
+        encoder.doEncode(event);
+        closeQuietly(outputStream);
+        
+        JsonNode node = MAPPER.readTree(outputStream.toByteArray());
+        
+        assertThat(node.get("thing_one").textValue()).isEqualTo("One");
+        assertThat(node.get("thing_two")).isNull();
+    }
+    
+    @Test
+    public void mdcNoneIncluded() throws Exception {
         Map<String, String> mdcMap = new HashMap<String, String>();
         mdcMap.put("thing_one", "One");
         mdcMap.put("thing_two", "Three");
@@ -252,13 +295,14 @@ public class LogstashEncoderTest {
         when(event.getMDCPropertyMap()).thenReturn(mdcMap);
         
         encoder.setIncludeMdc(false);
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("thing_one"), is(nullValue()));
-        assertThat(node.get("thing_two"), is(nullValue()));
+        assertThat(node.get("thing_one")).isNull();
+        assertThat(node.get("thing_two")).isNull();
     }
     
     @Test
@@ -271,13 +315,14 @@ public class LogstashEncoderTest {
         when(event.getMDCPropertyMap()).thenReturn(mdcMap);
         
         encoder.getFieldNames().setMdc("mdc");
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("mdc").get("thing_one").textValue(), is("One"));
-        assertThat(node.get("mdc").get("thing_two").textValue(), is("Three"));
+        assertThat(node.get("mdc").get("thing_one").textValue()).isEqualTo("One");
+        assertThat(node.get("mdc").get("thing_two").textValue()).isEqualTo("Three");
     }
     
     @Test
@@ -285,6 +330,7 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
         when(event.getMDCPropertyMap()).thenReturn(null);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
     }
@@ -298,15 +344,16 @@ public class LogstashEncoderTest {
         
         encoder.setIncludeCallerInfo(true);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("caller_class_name").textValue(), is(stackTraceElements[0].getClassName()));
-        assertThat(node.get("caller_method_name").textValue(), is(stackTraceElements[0].getMethodName()));
-        assertThat(node.get("caller_file_name").textValue(), is(stackTraceElements[0].getFileName()));
-        assertThat(node.get("caller_line_number").intValue(), is(stackTraceElements[0].getLineNumber()));
+        assertThat(node.get("caller_class_name").textValue()).isEqualTo(stackTraceElements[0].getClassName());
+        assertThat(node.get("caller_method_name").textValue()).isEqualTo(stackTraceElements[0].getMethodName());
+        assertThat(node.get("caller_file_name").textValue()).isEqualTo(stackTraceElements[0].getFileName());
+        assertThat(node.get("caller_line_number").intValue()).isEqualTo(stackTraceElements[0].getLineNumber());
     }
     
     @Test
@@ -318,16 +365,16 @@ public class LogstashEncoderTest {
         
         encoder.setIncludeCallerInfo(true);
         encoder.getFieldNames().setCaller("caller");
-        
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("caller").get("caller_class_name").textValue(), is(stackTraceElements[0].getClassName()));
-        assertThat(node.get("caller").get("caller_method_name").textValue(), is(stackTraceElements[0].getMethodName()));
-        assertThat(node.get("caller").get("caller_file_name").textValue(), is(stackTraceElements[0].getFileName()));
-        assertThat(node.get("caller").get("caller_line_number").intValue(), is(stackTraceElements[0].getLineNumber()));
+        assertThat(node.get("caller").get("caller_class_name").textValue()).isEqualTo(stackTraceElements[0].getClassName());
+        assertThat(node.get("caller").get("caller_method_name").textValue()).isEqualTo(stackTraceElements[0].getMethodName());
+        assertThat(node.get("caller").get("caller_file_name").textValue()).isEqualTo(stackTraceElements[0].getFileName());
+        assertThat(node.get("caller").get("caller_line_number").intValue()).isEqualTo(stackTraceElements[0].getLineNumber());
     }
     
     @Test
@@ -343,14 +390,15 @@ public class LogstashEncoderTest {
         
         encoder.setIncludeCallerInfo(false);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
-        assertThat(node.get("caller_class_name"), is(nullValue()));
-        assertThat(node.get("caller_method_name"), is(nullValue()));
-        assertThat(node.get("caller_file_name"), is(nullValue()));
-        assertThat(node.get("caller_line_number"), is(nullValue()));
+        assertThat(node.get("caller_class_name")).isNull();
+        assertThat(node.get("caller_method_name")).isNull();
+        assertThat(node.get("caller_file_name")).isNull();
+        assertThat(node.get("caller_line_number")).isNull();
     }
     
     @Test
@@ -365,13 +413,14 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
         
         encoder.setContext(context);
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("thing_one").textValue(), is("One"));
-        assertThat(node.get("thing_two").textValue(), is("Three"));
+        assertThat(node.get("thing_one").textValue()).isEqualTo("One");
+        assertThat(node.get("thing_two").textValue()).isEqualTo("Three");
     }
     
     @Test
@@ -386,13 +435,14 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
         encoder.setIncludeContext(false);
         encoder.setContext(context);
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("thing_one"), is(nullValue()));
-        assertThat(node.get("thing_two"), is(nullValue()));
+        assertThat(node.get("thing_one")).isNull();
+        assertThat(node.get("thing_two")).isNull();
     }
     
     @Test
@@ -408,13 +458,14 @@ public class LogstashEncoderTest {
         
         encoder.getFieldNames().setContext("context");
         encoder.setContext(context);
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("context").get("thing_one").textValue(), is("One"));
-        assertThat(node.get("context").get("thing_two").textValue(), is("Three"));
+        assertThat(node.get("context").get("thing_one").textValue()).isEqualTo("One");
+        assertThat(node.get("context").get("thing_two").textValue()).isEqualTo("Three");
     }
     
     @Test
@@ -423,6 +474,7 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.INFO);
         when(event.getMarker()).thenReturn(marker);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
@@ -438,6 +490,7 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.INFO);
         when(event.getMarker()).thenReturn(marker);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
@@ -451,12 +504,13 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.INFO);
         when(event.getMarker()).thenReturn(null);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.findValue("tags"), nullValue());
+        assertThat(node.findValue("tags")).isNull();
     }
     
     /**
@@ -473,12 +527,13 @@ public class LogstashEncoderTest {
         when(event.getMarker()).thenReturn(marker);
         when(event.getArgumentArray()).thenReturn(argArray);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(MAPPER.convertValue(argArray, JsonNode.class).equals(node.get("json_message")), is(true));
+        assertThat(MAPPER.convertValue(argArray, JsonNode.class).equals(node.get("json_message"))).isEqualTo(true);
     }
     
     @Test
@@ -489,21 +544,22 @@ public class LogstashEncoderTest {
         when(event.getMarker()).thenReturn(marker);
         when(event.getArgumentArray()).thenReturn(argArray);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(MAPPER.convertValue(argArray, JsonNode.class).equals(node.get("json_message")), is(true));
+        assertThat(MAPPER.convertValue(argArray, JsonNode.class).equals(node.get("json_message"))).isEqualTo(true);
     }
     
     @Test
     public void immediateFlushIsSane() {
         encoder.setImmediateFlush(true);
-        assertThat(encoder.isImmediateFlush(), is(true));
+        assertThat(encoder.isImmediateFlush()).isEqualTo(true);
         
         encoder.setImmediateFlush(false);
-        assertThat(encoder.isImmediateFlush(), is(false));
+        assertThat(encoder.isImmediateFlush()).isEqualTo(false);
     }
     
     @Test
@@ -512,14 +568,39 @@ public class LogstashEncoderTest {
         ILoggingEvent event = mockBasicILoggingEvent(Level.INFO);
         
         encoder.setCustomFields(customFields);
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
         
-        assertThat(node.get("appname").textValue(), is("damnGodWebservice"));
+        assertThat(node.get("appname").textValue()).isEqualTo("damnGodWebservice");
         Assert.assertTrue(node.get("roles").equals(parse("[\"customerorder\", \"auth\"]")));
         Assert.assertTrue(node.get("buildinfo").equals(parse("{ \"version\" : \"Version 0.1.0-SNAPSHOT\", \"lastcommit\" : \"75473700d5befa953c45f630c6d9105413c16fe1\"}")));
+    }
+    
+    @Test
+    public void customTimeZone() throws Exception {
+        final long timestamp = System.currentTimeMillis();
+        
+        ILoggingEvent event = mockBasicILoggingEvent(Level.ERROR);
+        when(event.getTimeStamp()).thenReturn(timestamp);
+        
+        encoder.setTimeZone("UTC");
+        encoder.start();
+        encoder.doEncode(event);
+        closeQuietly(outputStream);
+        
+        JsonNode node = MAPPER.readTree(outputStream.toByteArray());
+        
+        assertThat(node.get("@timestamp").textValue()).isEqualTo(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZZ", TimeZone.getTimeZone("UTC")).format
+                (timestamp));
+        assertThat(node.get("@version").intValue()).isEqualTo(1);
+        assertThat(node.get("logger_name").textValue()).isEqualTo("LoggerName");
+        assertThat(node.get("thread_name").textValue()).isEqualTo("ThreadName");
+        assertThat(node.get("message").textValue()).isEqualTo("My message");
+        assertThat(node.get("level").textValue()).isEqualTo("ERROR");
+        assertThat(node.get("level_value").intValue()).isEqualTo(40000);
     }
     
     public JsonNode parse(String string) throws JsonParseException, IOException {
@@ -533,11 +614,12 @@ public class LogstashEncoderTest {
         when(event.getArgumentArray()).thenReturn(null);
         
         encoder.setEnableContextMap(true);
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
-        assertThat(node.get("message").textValue(), is("My message"));
+        assertThat(node.get("message").textValue()).isEqualTo("My message");
     }
     
     /**
@@ -564,19 +646,20 @@ public class LogstashEncoderTest {
         when(event.getArgumentArray()).thenReturn(argList);
         
         encoder.setEnableContextMap(true);
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
-        assertThat(node.get("duration"), notNullValue());
-        assertThat(node.get("duration").intValue(), is(1200));
-        assertThat(node.get("remoteResponse"), notNullValue());
-        assertThat(node.get("remoteResponse").textValue(), is("OK"));
-        assertThat(node.get("extra"), notNullValue());
-        assertThat(node.get("extra").get("extraEntry"), notNullValue());
-        assertThat(node.get("extra").get("extraEntry").textValue(), is("extraValue"));
+        assertThat(node.get("duration")).isNotNull();
+        assertThat(node.get("duration").intValue()).isEqualTo(1200);
+        assertThat(node.get("remoteResponse")).isNotNull();
+        assertThat(node.get("remoteResponse").textValue()).isEqualTo("OK");
+        assertThat(node.get("extra")).isNotNull();
+        assertThat(node.get("extra").get("extraEntry")).isNotNull();
+        assertThat(node.get("extra").get("extraEntry").textValue()).isEqualTo("extraValue");
         
-        assertThat("The second map from the end should be ignored", node.get("ignoredMapEntry"), nullValue());
+        assertThat(node.get("ignoredMapEntry")).as("The second map from the end should be ignored").isNull();
     }
     
     @Test
@@ -598,19 +681,20 @@ public class LogstashEncoderTest {
         Marker marker = appendEntries(contextMap);
         when(event.getMarker()).thenReturn(marker);
         
+        encoder.start();
         encoder.doEncode(event);
         closeQuietly(outputStream);
         
         JsonNode node = MAPPER.readTree(outputStream.toByteArray());
-        assertThat(node.get("duration"), notNullValue());
-        assertThat(node.get("duration").intValue(), is(1200));
-        assertThat(node.get("remoteResponse"), notNullValue());
-        assertThat(node.get("remoteResponse").textValue(), is("OK"));
-        assertThat(node.get("extra"), notNullValue());
-        assertThat(node.get("extra").get("extraEntry"), notNullValue());
-        assertThat(node.get("extra").get("extraEntry").textValue(), is("extraValue"));
+        assertThat(node.get("duration")).isNotNull();
+        assertThat(node.get("duration").intValue()).isEqualTo(1200);
+        assertThat(node.get("remoteResponse")).isNotNull();
+        assertThat(node.get("remoteResponse").textValue()).isEqualTo("OK");
+        assertThat(node.get("extra")).isNotNull();
+        assertThat(node.get("extra").get("extraEntry")).isNotNull();
+        assertThat(node.get("extra").get("extraEntry").textValue()).isEqualTo("extraValue");
         
-        assertThat("The second map from the end should be ignored", node.get("ignoredMapEntry"), nullValue());
+        assertThat(node.get("ignoredMapEntry")).as("The second map from the end should be ignored").isNull();
     }
     
     @Test
@@ -631,13 +715,13 @@ public class LogstashEncoderTest {
          * The configuration suppresses the version field,
          * make sure it doesn't appear.
          */
-        assertThat(node.get("@version"), is(nullValue()));
-        assertThat(node.get(LogstashFormatter.IGNORE_FIELD_INDICATOR), is(nullValue()));
+        assertThat(node.get("@version")).isNull();
+        assertThat(node.get(LogstashCommonFieldNames.IGNORE_FIELD_INDICATOR)).isNull();
         
-        assertThat(node.get("appname").textValue(), is("damnGodWebservice"));
-        assertThat(node.get("appendedName").textValue(), is("appendedValue"));
-        assertThat(node.get("myMdcKey"), is(nullValue()));
-        assertThat(node.get("logger").textValue(), is(LogstashEncoderTest.class.getName()));
+        assertThat(node.get("appname").textValue()).isEqualTo("damnGodWebservice");
+        assertThat(node.get("appendedName").textValue()).isEqualTo("appendedValue");
+        assertThat(node.get("myMdcKey")).isNull();
+        assertThat(node.get("logger").textValue()).isEqualTo(LogstashEncoderTest.class.getName());
         Assert.assertTrue(node.get("roles").equals(parse("[\"customerorder\", \"auth\"]")));
         Assert.assertTrue(node.get("buildinfo").equals(parse("{ \"version\" : \"Version 0.1.0-SNAPSHOT\", \"lastcommit\" : \"75473700d5befa953c45f630c6d9105413c16fe1\"}")));
     }

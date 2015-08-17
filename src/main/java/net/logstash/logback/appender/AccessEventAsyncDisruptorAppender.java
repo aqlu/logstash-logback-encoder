@@ -11,17 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.slf4j.helpers;
+package net.logstash.logback.appender;
+
+import ch.qos.logback.access.spi.IAccessEvent;
 
 /**
- * A hack to make {@link BasicMarker} extendable since {@link BasicMarker}'s constructor is package-private.
- * 
- * The alternative is to re-implement the logic in {@link BasicMarker}.
+ * A {@link DelegatingAsyncDisruptorAppender} for {@link IAccessEvent}s.
  */
-@SuppressWarnings("serial")
-public class LogstashBasicMarker extends BasicMarker {
+public class AccessEventAsyncDisruptorAppender extends DelegatingAsyncDisruptorAppender<IAccessEvent> {
     
-    public LogstashBasicMarker(String name) {
-        super(name);
-    }
 }

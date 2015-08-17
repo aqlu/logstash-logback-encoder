@@ -13,110 +13,119 @@
  */
 package net.logstash.logback.encoder;
 
-import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import net.logstash.logback.LogstashFormatter;
-import net.logstash.logback.decorate.JsonFactoryDecorator;
-import net.logstash.logback.decorate.JsonGeneratorDecorator;
+import net.logstash.logback.composite.CompositeJsonFormatter;
+import net.logstash.logback.composite.JsonProvider;
 import net.logstash.logback.fieldnames.LogstashFieldNames;
 import net.logstash.logback.marker.Markers;
-
-import org.apache.commons.io.IOUtils;
-
+import ch.qos.logback.classic.pattern.ThrowableHandlingConverter;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.CoreConstants;
-import ch.qos.logback.core.encoder.EncoderBase;
 
-public class LogstashEncoder extends EncoderBase<ILoggingEvent> {
-    
-    private boolean immediateFlush = true;
-    
-    private final LogstashFormatter formatter = new LogstashFormatter(this);
+public class LogstashEncoder extends LoggingEventCompositeJsonEncoder {
     
     @Override
-    public void doEncode(ILoggingEvent event) throws IOException {
-        
-        formatter.writeValueToOutputStream(event, context, outputStream);
-        IOUtils.write(CoreConstants.LINE_SEPARATOR, outputStream);
-        
-        if (immediateFlush) {
-            outputStream.flush();
-        }
-        
+    protected CompositeJsonFormatter<ILoggingEvent> createFormatter() {
+        return new LogstashFormatter(this);
     }
     
     @Override
-    public void start() {
-        super.start();
-        formatter.start();
+    protected LogstashFormatter getFormatter() {
+        return (LogstashFormatter) super.getFormatter();
     }
     
-    @Override
-    public void stop() {
-        super.stop();
-        formatter.stop();
+    public void addProvider(JsonProvider<ILoggingEvent> provider) {
+        getFormatter().addProvider(provider);
     }
     
-    @Override
-    public void close() throws IOException {
-        IOUtils.write(CoreConstants.LINE_SEPARATOR, outputStream);
+    public boolean isIncludeCallerData() {
+        return getFormatter().isIncludeCallerData();
     }
     
-    public boolean isImmediateFlush() {
-        return immediateFlush;
+    public void setIncludeCallerData(boolean includeCallerData) {
+        getFormatter().setIncludeCallerData(includeCallerData);
     }
     
-    public void setImmediateFlush(boolean immediateFlush) {
-        this.immediateFlush = immediateFlush;
-    }
-    
+    /**
+     * @deprecated use {@link #isIncludeCallerData()} (to use the same name that logback uses)
+     */
+    @Deprecated
     public boolean isIncludeCallerInfo() {
-        return formatter.isIncludeCallerInfo();
+        return getFormatter().isIncludeCallerInfo();
     }
     
+    /**
+     * @deprecated use {@link #setIncludeCallerData(boolean)} (to use the same name that logback uses)
+     */
+    @Deprecated
     public void setIncludeCallerInfo(boolean includeCallerInfo) {
-        formatter.setIncludeCallerInfo(includeCallerInfo);
+        getFormatter().setIncludeCallerInfo(includeCallerInfo);
     }
     
     public void setCustomFields(String customFields) {
-        formatter.setCustomFieldsFromString(customFields);
+        getFormatter().setCustomFieldsFromString(customFields);
     }
     
     public String getCustomFields() {
-        return formatter.getCustomFields().toString();
+        return getFormatter().getCustomFields().toString();
     }
     
     public LogstashFieldNames getFieldNames() {
-        return formatter.getFieldNames();
+        return getFormatter().getFieldNames();
     }
     
     public void setFieldNames(LogstashFieldNames fieldNames) {
-        formatter.setFieldNames(fieldNames);
+        getFormatter().setFieldNames(fieldNames);
     }
 
     public int getShortenedLoggerNameLength() {
-        return formatter.getShortenedLoggerNameLength();
+        return getFormatter().getShortenedLoggerNameLength();
     }
     
     public void setShortenedLoggerNameLength(int length) {
-        formatter.setShortenedLoggerNameLength(length);
+        getFormatter().setShortenedLoggerNameLength(length);
     }
     
     public boolean isIncludeMdc() {
-        return formatter.isIncludeMdc();
+        return getFormatter().isIncludeMdc();
     }
     
     public void setIncludeMdc(boolean includeMdc) {
-        formatter.setIncludeMdc(includeMdc);
+        getFormatter().setIncludeMdc(includeMdc);
     }
     
+    public List<String> getIncludeMdcKeyNames() {
+        return getFormatter().getIncludeMdcKeyNames();
+    }
+
+    public void addIncludeMdcKeyName(String includedMdcKeyName) {
+        getFormatter().addIncludeMdcKeyName(includedMdcKeyName);
+    }
+
+    public void setIncludeMdcKeyNames(List<String> includeMdcKeyNames) {
+        getFormatter().setIncludeMdcKeyNames(includeMdcKeyNames);
+    }
+
+    public List<String> getExcludeMdcKeyNames() {
+        return getFormatter().getExcludeMdcKeyNames();
+    }
+
+    public void addExcludeMdcKeyName(String excludedMdcKeyName) {
+        getFormatter().addExcludeMdcKeyName(excludedMdcKeyName);
+    }
+
+    public void setExcludeMdcKeyNames(List<String> excludeMdcKeyNames) {
+        getFormatter().setExcludeMdcKeyNames(excludeMdcKeyNames);
+    }
+
     public boolean isIncludeContext() {
-        return formatter.isIncludeContext();
+        return getFormatter().isIncludeContext();
     }
     
     public void setIncludeContext(boolean includeContext) {
-        formatter.setIncludeContext(includeContext);
+        getFormatter().setIncludeContext(includeContext);
     }
     
     /**
@@ -148,7 +157,7 @@ public class LogstashEncoder extends EncoderBase<ILoggingEvent> {
      */
     @Deprecated
     public void setEnableContextMap(boolean enableContextMap) {
-        formatter.setEnableContextMap(enableContextMap);
+        getFormatter().setEnableContextMap(enableContextMap);
     }
     
     /**
@@ -156,26 +165,23 @@ public class LogstashEncoder extends EncoderBase<ILoggingEvent> {
      */
     @Deprecated
     public boolean isEnableContextMap() {
-        return formatter.isEnableContextMap();
+        return getFormatter().isEnableContextMap();
     }
     
-    public JsonFactoryDecorator getJsonFactoryDecorator() {
-        return formatter.getJsonFactoryDecorator();
+    public ThrowableHandlingConverter getThrowableConverter() {
+        return getFormatter().getThrowableConverter();
     }
 
-    public void setJsonFactoryDecorator(JsonFactoryDecorator jsonFactoryDecorator) {
-        formatter.setJsonFactoryDecorator(jsonFactoryDecorator);
+    public void setThrowableConverter(ThrowableHandlingConverter throwableConverter) {
+        getFormatter().setThrowableConverter(throwableConverter);
     }
 
-    public JsonGeneratorDecorator getJsonGeneratorDecorator() {
-        return formatter.getJsonGeneratorDecorator();
+    public String getTimeZone() {
+        return getFormatter().getTimeZone();
     }
 
-    public void setJsonGeneratorDecorator(JsonGeneratorDecorator jsonGeneratorDecorator) {
-        formatter.setJsonGeneratorDecorator(jsonGeneratorDecorator);
+    public void setTimeZone(String timeZoneId) {
+        getFormatter().setTimeZone(timeZoneId);
     }
 
-    protected LogstashFormatter getFormatter() {
-        return formatter;
-    }
 }

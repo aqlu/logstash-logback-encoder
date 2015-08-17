@@ -15,11 +15,14 @@ package net.logstash.logback.appender;
 
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.List;
 
+import net.logstash.logback.composite.JsonProvider;
 import net.logstash.logback.decorate.JsonFactoryDecorator;
 import net.logstash.logback.decorate.JsonGeneratorDecorator;
 import net.logstash.logback.fieldnames.LogstashFieldNames;
 import net.logstash.logback.layout.LogstashLayout;
+import ch.qos.logback.classic.pattern.ThrowableHandlingConverter;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Layout;
 import ch.qos.logback.core.net.SyslogAppenderBase;
@@ -69,6 +72,10 @@ public class LogstashSocketAppender extends SyslogAppenderBase<ILoggingEvent> {
         setSyslogHost(host);
     }
     
+    public void addProvider(JsonProvider<ILoggingEvent> provider) {
+        logstashLayout.addProvider(provider);
+    }
+    
     public void setCustomFields(String customFields) {
         logstashLayout.setCustomFields(customFields);
     }
@@ -77,10 +84,26 @@ public class LogstashSocketAppender extends SyslogAppenderBase<ILoggingEvent> {
         return logstashLayout.getCustomFields().toString();
     }
     
+    public boolean isIncludeCallerData() {
+        return logstashLayout.isIncludeCallerData();
+    }
+    
+    public void setIncludeCallerData(boolean includeCallerData) {
+        logstashLayout.setIncludeCallerData(includeCallerData);
+    }
+    
+    /**
+     * @deprecated use {@link #isIncludeCallerData()} (to use the same name that logback uses) 
+     */
+    @Deprecated
     public boolean isIncludeCallerInfo() {
         return logstashLayout.isIncludeCallerInfo();
     }
     
+    /**
+     * @deprecated use {@link #setIncludeCallerData(boolean)} (to use the same name that logback uses)
+     */
+    @Deprecated
     public void setIncludeCallerInfo(boolean includeCallerInfo) {
         logstashLayout.setIncludeCallerInfo(includeCallerInfo);
     }
@@ -99,6 +122,30 @@ public class LogstashSocketAppender extends SyslogAppenderBase<ILoggingEvent> {
     
     public void setIncludeMdc(boolean includeMdc) {
         logstashLayout.setIncludeMdc(includeMdc);
+    }
+    
+    public List<String> getIncludeMdcKeyNames() {
+        return logstashLayout.getIncludeMdcKeyNames();
+    }
+
+    public void addIncludeMdcKeyName(String includedMdcKeyName) {
+        logstashLayout.addIncludeMdcKeyName(includedMdcKeyName);
+    }
+
+    public void setIncludeMdcKeyNames(List<String> includeMdcKeyNames) {
+        logstashLayout.setIncludeMdcKeyNames(includeMdcKeyNames);
+    }
+
+    public List<String> getExcludeMdcKeyNames() {
+        return logstashLayout.getExcludeMdcKeyNames();
+    }
+
+    public void addExcludeMdcKeyName(String excludedMdcKeyName) {
+        logstashLayout.addExcludeMdcKeyName(excludedMdcKeyName);
+    }
+
+    public void setExcludeMdcKeyNames(List<String> excludeMdcKeyNames) {
+        logstashLayout.setExcludeMdcKeyNames(excludeMdcKeyNames);
     }
     
     public boolean isIncludeContext() {
@@ -131,6 +178,36 @@ public class LogstashSocketAppender extends SyslogAppenderBase<ILoggingEvent> {
 
     public void setJsonGeneratorDecorator(JsonGeneratorDecorator jsonGeneratorDecorator) {
         logstashLayout.setJsonGeneratorDecorator(jsonGeneratorDecorator);
+    }
+
+    public String getTimeZone() {
+        return logstashLayout.getTimeZone();
+    }
+
+    public void setTimeZone(String timeZoneId) {
+        logstashLayout.setTimeZone(timeZoneId);
+    }
+
+    public ThrowableHandlingConverter getThrowableConverter() {
+        return logstashLayout.getThrowableConverter();
+    }
+
+    public void setThrowableConverter(ThrowableHandlingConverter throwableConverter) {
+        logstashLayout.setThrowableConverter(throwableConverter);
+    }
+    
+    public Layout<ILoggingEvent> getPrefix() {
+        return logstashLayout.getPrefix();
+    }
+    public void setPrefix(Layout<ILoggingEvent> prefix) {
+        logstashLayout.setPrefix(prefix);
+    }
+
+    public Layout<ILoggingEvent> getSuffix() {
+        return logstashLayout.getSuffix();
+    }
+    public void setSuffix(Layout<ILoggingEvent> suffix) {
+        logstashLayout.setSuffix(suffix);
     }
 
     @Override

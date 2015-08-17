@@ -4,7 +4,7 @@
 
     <groupId>net.logstash.logback</groupId>
     <artifactId>logstash-logback-encoder</artifactId>
-    <version>3.4-qianmi-2</version>
+    <version>4.4-qianmi-1</version>
 
     <name>Logstash Logback Encoder</name>
     <description>Logback encoder which will output events as Logstash-compatible JSON</description>
@@ -19,7 +19,7 @@
     <scm>
         <connection>scm:git:git@github.com:logstash/logstash-logback-encoder.git</connection>
         <developerConnection>scm:git:git@github.com:logstash/logstash-logback-encoder.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>logstash-logback-encoder-4.4</tag>
     </scm>
 
     <prerequisites>
@@ -28,21 +28,38 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <ch.qos.logback.version>1.1.2</ch.qos.logback.version>
-        <com.fasterxml.jackson.version>2.4.2</com.fasterxml.jackson.version>
+<!--<<<<<<< HEAD-->
+        <!--<ch.qos.logback.version>1.1.2</ch.qos.logback.version>-->
+        <!--<com.fasterxml.jackson.version>2.4.2</com.fasterxml.jackson.version>-->
+        <!--<commons.io.version>2.4</commons.io.version>-->
+        <!--<commons.lang.version>2.6</commons.lang.version>-->
+        <!--<junit.version>4.11</junit.version>-->
+        <!--<org.hamcrest.version>1.3</org.hamcrest.version>-->
+        <!--<org.mockito.version>1.9.5</org.mockito.version>-->
+        <!--<org.slf4j.version>1.7.6</org.slf4j.version>-->
+        <redis.client.jedis.version>2.5.2</redis.client.jedis.version>
+        <ch.qos.logback.version>1.1.3</ch.qos.logback.version>
+        <com.fasterxml.jackson.version>2.5.4</com.fasterxml.jackson.version>
         <commons.io.version>2.4</commons.io.version>
         <commons.lang.version>2.6</commons.lang.version>
-        <junit.version>4.11</junit.version>
-        <org.hamcrest.version>1.3</org.hamcrest.version>
-        <org.mockito.version>1.9.5</org.mockito.version>
-        <org.slf4j.version>1.7.6</org.slf4j.version>
-        <redis.client.jedis.version>2.5.2</redis.client.jedis.version>
+        <junit.version>4.12</junit.version>
+        <org.assertj.version>2.1.0</org.assertj.version>
+        <org.mockito.version>1.10.19</org.mockito.version>
+        <com.lmax.disruptor.version>3.3.0</com.lmax.disruptor.version>
     </properties>
 
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
             <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+        <license>
+            <name>MIT License</name>
+            <url>http://www.slf4j.org/license.html</url>
+            <comments>
+                The portion of LogstashBasicMarker.java that has been copied from 
+                org.slf4j.helpers.BasicMarker is released under the MIT License.
+            </comments>
         </license>
     </licenses>
 
@@ -53,6 +70,10 @@
             <email>neil.prosser@gmail.com</email>
             <organization>Nokia</organization>
             <organizationUrl>http://music.nokia.com</organizationUrl>
+        </developer>
+        <developer>
+            <id>philsttr</id>
+            <name>Phil Clay</name>
         </developer>
         <developer>
             <id>lusis</id>
@@ -78,18 +99,25 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
             <version>${ch.qos.logback.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${ch.qos.logback.version}</version>
+            <!--
+               Required for logging regular ILoggingEvents with a Logger.
+               Not needed if only logging IAccessEvents for access logs. 
+            -->
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-access</artifactId>
             <version>${ch.qos.logback.version}</version>
+            <!--
+               Required for logging IAccessEvents for access logs. 
+               Not needed if only logging regular ILoggingEvents with a Logger.
+            -->
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -117,26 +145,25 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>${com.lmax.disruptor.version}</version>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-core</artifactId>
-            <version>${org.hamcrest.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-library</artifactId>
-            <version>${org.hamcrest.version}</version>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${org.assertj.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
+            <artifactId>mockito-core</artifactId>
             <version>${org.mockito.version}</version>
             <scope>test</scope>
         </dependency>
@@ -229,7 +256,7 @@
                         <!-- attach to Logback bundle as fragment -->
                         <Fragment-Host>ch.qos.logback.classic</Fragment-Host>
                         <!-- exclude following imports as required classes are relocated by shade plugin and ignore ch.qos.logback.[core,classic] because this is a fragment and gets them from parent. -->
-                        <Import-Package>!org.apache.commons.*,!com.fasterxml.jackson.*,!ch.qos.logback.classic.*,!ch.qos.logback.core.*,!org.slf4j.*,*</Import-Package>
+                        <Import-Package>!org.apache.commons.*,!com.lmax.disruptor.*,!ch.qos.logback.classic.*,!ch.qos.logback.core.*,!org.slf4j.*,*</Import-Package>
                     </instructions>
                 </configuration>
             </plugin>
@@ -319,6 +346,10 @@
                                 <!--<pattern>ch.qos.logback</pattern>-->
                                 <!--<shadedPattern>${project.groupId}.ch.qos.logback</shadedPattern>-->
                             <!--</relocation>-->
+                            <relocation>
+                                <pattern>com.lmax.disruptor</pattern>
+                                <shadedPattern>${project.groupId}.encoder.com.lmax.disruptor</shadedPattern>
+                            </relocation>
                         </relocations>
                     </configuration>
                 </plugin>

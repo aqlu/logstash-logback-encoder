@@ -13,60 +13,37 @@
  */
 package net.logstash.logback.encoder;
 
-import static org.apache.commons.io.IOUtils.*;
-
-import java.io.IOException;
-
 import net.logstash.logback.LogstashAccessFormatter;
+import net.logstash.logback.composite.CompositeJsonFormatter;
+import net.logstash.logback.fieldnames.LogstashAccessFieldNames;
 import ch.qos.logback.access.spi.IAccessEvent;
-import ch.qos.logback.core.CoreConstants;
-import ch.qos.logback.core.encoder.EncoderBase;
 
-public class LogstashAccessEncoder extends EncoderBase<IAccessEvent> {
-    
-    private boolean immediateFlush = true;
-    
-    /**
-     * If true, the caller information is included in the logged data.
-     * Note: calculating the caller data is an expensive operation.
-     */
-    private final LogstashAccessFormatter formatter = new LogstashAccessFormatter(this);
+public class LogstashAccessEncoder extends AccessEventCompositeJsonEncoder {
     
     @Override
-    public void doEncode(IAccessEvent event) throws IOException {
-        
-        write(formatter.writeValueAsBytes(event, getContext()), outputStream);
-        write(CoreConstants.LINE_SEPARATOR, outputStream);
-        
-        if (immediateFlush) {
-            outputStream.flush();
-        }
-        
+    protected CompositeJsonFormatter<IAccessEvent> createFormatter() {
+        return new LogstashAccessFormatter(this);
     }
     
     @Override
-    public void start() {
-        super.start();
-        formatter.start();
+    protected LogstashAccessFormatter getFormatter() {
+        return (LogstashAccessFormatter) super.getFormatter();
     }
     
-    @Override
-    public void stop() {
-        super.stop();
-        formatter.stop();
+    public LogstashAccessFieldNames getFieldNames() {
+        return getFormatter().getFieldNames();
     }
     
-    @Override
-    public void close() throws IOException {
-        write(LINE_SEPARATOR, outputStream);
+    public void setFieldNames(LogstashAccessFieldNames fieldNames) {
+        getFormatter().setFieldNames(fieldNames);
     }
-    
-    public boolean isImmediateFlush() {
-        return immediateFlush;
+
+    public String getTimeZone() {
+        return getFormatter().getTimeZone();
     }
-    
-    public void setImmediateFlush(boolean immediateFlush) {
-        this.immediateFlush = immediateFlush;
+
+    public void setTimeZone(String timeZoneId) {
+        getFormatter().setTimeZone(timeZoneId);
     }
-    
+
 }
