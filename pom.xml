@@ -28,15 +28,6 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!--<ch.qos.logback.version>1.1.2</ch.qos.logback.version>-->
-        <!--<com.fasterxml.jackson.version>2.4.2</com.fasterxml.jackson.version>-->
-        <!--<commons.io.version>2.4</commons.io.version>-->
-        <!--<commons.lang.version>2.6</commons.lang.version>-->
-        <!--<junit.version>4.11</junit.version>-->
-        <!--<org.hamcrest.version>1.3</org.hamcrest.version>-->
-        <!--<org.mockito.version>1.9.5</org.mockito.version>-->
-        <!--<org.slf4j.version>1.7.6</org.slf4j.version>-->
-        <redis.client.jedis.version>2.5.2</redis.client.jedis.version>
         <ch.qos.logback.version>1.1.3</ch.qos.logback.version>
         <com.fasterxml.jackson.version>2.5.4</com.fasterxml.jackson.version>
         <commons.io.version>2.4</commons.io.version>
@@ -45,6 +36,7 @@
         <org.assertj.version>2.1.0</org.assertj.version>
         <org.mockito.version>1.10.19</org.mockito.version>
         <com.lmax.disruptor.version>3.3.0</com.lmax.disruptor.version>
+        <redis.client.jedis.version>2.5.2</redis.client.jedis.version>
         <kafka.client.version>0.9.0.1</kafka.client.version>
     </properties>
 
@@ -99,7 +91,7 @@
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>${kafka.client.version}</version>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -142,13 +134,11 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>${commons.io.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
             <version>${commons.lang.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.lmax</groupId>
