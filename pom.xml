@@ -28,7 +28,6 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-<!--<<<<<<< HEAD-->
         <!--<ch.qos.logback.version>1.1.2</ch.qos.logback.version>-->
         <!--<com.fasterxml.jackson.version>2.4.2</com.fasterxml.jackson.version>-->
         <!--<commons.io.version>2.4</commons.io.version>-->
@@ -46,6 +45,7 @@
         <org.assertj.version>2.1.0</org.assertj.version>
         <org.mockito.version>1.10.19</org.mockito.version>
         <com.lmax.disruptor.version>3.3.0</com.lmax.disruptor.version>
+        <kafka.client.version>0.9.0.1</kafka.client.version>
     </properties>
 
     <licenses>
@@ -93,6 +93,12 @@
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>${redis.client.jedis.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>${kafka.client.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
